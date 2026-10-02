@@ -1,0 +1,35 @@
+[DEFAULT]
+banaction = iptables-allports
+ignoreip  = 127.0.0.1/8
+usedns    = no
+backend   = polling
+
+bantime           = 10m
+bantime.increment = true
+bantime.factor    = 2
+bantime.maxtime   = 1d
+bantime.rndtime   = 30s
+
+[sshd]
+enabled = false
+
+[sshd-ddos]
+enabled = false
+
+# HTTP API Flood Protection (Port 8000)
+[http-flood]
+enabled  = true
+port     = http,https,8000
+filter   = http-flood
+logpath  = /var/log/ldap-api/access.log
+maxretry = 60
+findtime = 10s
+
+# Extra Port & TLS Protection for LDAP (Ports 636 LDAPS and 389 STARTTLS)
+[ldap-tls-protection]
+enabled  = true
+port     = 636,389
+filter   = http-flood
+logpath  = /var/log/ldap-api/access.log
+maxretry = 30
+findtime = 10s
