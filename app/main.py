@@ -18,11 +18,19 @@ app = FastAPI(
     version="2.0.0",
 )
 
+# Security hardening: Restrict CORS to trusted frontend origins only
+ALLOWED_ORIGINS = [
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+    "http://frontend",
+    "http://security-frontend-nginx",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
