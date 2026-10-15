@@ -16,6 +16,9 @@ app = FastAPI(
     title="LDAP Authentication API with Hot Secret Rotation",
     description="Secured FastAPI service with LDAP backend and dynamic API Key validation",
     version="2.0.0",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
 )
 
 app.add_middleware(
@@ -44,6 +47,21 @@ class AccessLogMiddleware(BaseHTTPMiddleware):
         return response
 
 app.add_middleware(AccessLogMiddleware)
+
+
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+    response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
+    return response
 
 # Configuration from Environment
 LDAP_HOST = os.getenv("LDAP_HOST", "openldap")
