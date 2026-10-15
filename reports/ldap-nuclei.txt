@@ -1,2 +1,2 @@
-[tech-detect:uvicorn] [http] [info] http://ldap-api:8000
 [http-missing-security-headers:strict-transport-security] [http] [info] http://ldap-api:8000
+[tech-detect:uvicorn] [http] [info] http://ldap-api:8000

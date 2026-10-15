@@ -1,55 +1,37 @@
-# Security Vulnerability Assessment Report - LDAP Authentication API
+# Security Assessment - LDAP Authentication API
 
-- **Target Component:** FastAPI LDAP Authentication & Directory Service (`http://ldap-api:8000`)
-- **Scan Tool:** ProjectDiscovery Nuclei v3.11.1 (Templates v10.5.0)
-- **Baseline Scan Date:** 2026-10-15
-- **Post-Block-1 Scan Date:** 2026-10-15
-- **Assessment Scope:** Dynamic Application Security Testing (DAST); 11,102 templates loaded.
+- **Target:** `http://ldap-api:8000`
+- **Tool:** ProjectDiscovery Nuclei v3.11.1, templates v10.5.0
+- **Scan date:** 2026-10-15
+- **Scope:** 11,102 templates loaded; 13,253 HTTP connections
 
----
+## Current Scan Summary
 
-## Summary
+| Severity | Findings |
+|:---|---:|
+| Critical | 0 |
+| High | 0 |
+| Medium | 0 |
+| Low / Info | 2 |
 
-The baseline scan found 14 informational findings on LDAP. The latest full scan reports two informational detections: missing HSTS and the Uvicorn technology fingerprint. The documentation is now access-controlled and the missing security headers other than HSTS are corrected.
+Both remaining matches are informational: missing HSTS on the HTTP endpoint and Uvicorn technology identification.
 
-| Scan | Critical | High | Medium | Low / Info |
-|:---|---:|---:|---:|---:|
-| Baseline (before Block 1) | 0 | 0 | 0 | 14 |
-| Post-Block-1 validation | 0 | 0 | 0 | 2 |
-
-These Nuclei results are informational detections and hardening gaps, not evidence of exploitable vulnerabilities.
-
----
-
-## Remaining Informational Findings
-
-### Missing HTTP Strict Transport Security
+## Remaining Matches
 
 - **`http-missing-security-headers:strict-transport-security`**
-  - **Status:** Pending HTTPS deployment. The LDAP API is served over HTTP; sending HSTS over plain HTTP would not provide transport security.
-  - **Next step:** Configure TLS at the service or trusted reverse-proxy boundary, then enable HSTS there.
-
+  - The API currently serves plain HTTP. HSTS is meaningful only after a trusted HTTPS endpoint is configured; setting it on HTTP responses would not secure the transport.
 - **`tech-detect:uvicorn`**
-  - **Status:** Informational technology fingerprint. The API runs on Uvicorn; removing its version header alone would only mask the detector, not fix an exploitable weakness. It is retained transparently in the results.
+  - Informational identification of the ASGI server, not an exploitable vulnerability by itself. The server identity is retained rather than obscured and reported as a code fix.
 
----
+Nuclei also probed ports `4040`, `5814`, and `9780`; all refused connections. These are closed ports, not findings on the LDAP API's configured port `8000`.
 
-## Block 1 Remediation and Validation
+## Code Changes Verified
 
-The LDAP baseline contributed 14 informational findings to the combined baseline of 35 findings across the frontend, backend, and LDAP services. Block 1 makes these code-level changes:
+- Kept Swagger UI, ReDoc, and OpenAPI available and protected `/docs`, `/redoc`, `/openapi.json`, and `/docs/oauth2-redirect` with HTTP Basic authentication. The username is `apikey`; the password is the current hot-rotated API key. Unauthenticated requests receive `401`; authenticated requests receive `200`.
+- Added CSP, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, CORP, COEP, COOP, and `X-Permitted-Cross-Domain-Policies`.
+- Restricted CORS to `http://localhost:8080`; the previous arbitrary-origin finding did not recur.
+- The latest Nuclei scan no longer reports public API documentation or missing headers other than HSTS.
 
-- Kept Swagger UI, ReDoc, and OpenAPI available, but protected `/docs`, `/redoc`, `/openapi.json`, and `/docs/oauth2-redirect` with HTTP Basic authentication using username `apikey` and the current rotating API key as the password. Unauthenticated requests receive `401`; authorized requests receive `200`. This is access control, not removal of the documentation.
-- Added Content-Security-Policy, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, Cross-Origin-Resource-Policy, Cross-Origin-Embedder-Policy, Cross-Origin-Opener-Policy, and X-Permitted-Cross-Domain-Policies.
-- Replaced the wildcard CORS origin with the dashboard origin `http://localhost:8080` in the earlier block.
+## Remaining Work
 
-The post-remediation full scan confirmed that public documentation exposure is no longer detected and the missing headers other than HSTS are corrected. Uvicorn remains detectable and is reported as informational rather than being masked as a vulnerability fix. Nuclei also probed ports `4040` and `5814`; their connection refusals are closed ports, not findings against the LDAP API on port `8000`.
-
----
-
-## Three-Block Remediation Plan
-
-The 2026-10-15 baseline contained 35 findings: 12 frontend, 9 backend, and 14 LDAP.
-
-1. **Block 1 — LDAP API:** Completed and re-scanned. Public documentation now requires authentication, missing headers are corrected, and prior CORS is restricted. Remaining LDAP reports are HSTS pending HTTPS and an informational Uvicorn fingerprint.
-2. **Block 2 — Backend API (9 baseline findings):** Add the missing API security headers and reduce Express fingerprinting. The older development-environment finding is already mitigated by `NODE_ENV=production`.
-3. **Block 3 — Frontend and transport (12 frontend findings plus LDAP HSTS):** Review remaining frontend headers, update the NGINX image, remove the external font/SRI finding, and configure HTTPS before enabling HSTS.
+Configure HTTPS with a trusted certificate before enabling HSTS. Uvicorn identification remains an informational technology result.

@@ -80,7 +80,15 @@ async def add_security_headers(request, call_next):
 
     if response is None:
         response = await call_next(request)
-    response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+    if request.url.path in {"/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect"}:
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'none'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "font-src 'self' data: https://cdn.jsdelivr.net; img-src 'self' data: https://fastapi.tiangolo.com; "
+            "connect-src 'self'; frame-ancestors 'none'; base-uri 'none'"
+        )
+    else:
+        response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "no-referrer"
