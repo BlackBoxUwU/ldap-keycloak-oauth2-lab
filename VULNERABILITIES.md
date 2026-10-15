@@ -14,7 +14,7 @@
 | **Critical** | 0 | None |
 | **High** | 0 | None |
 | **Medium** | 0 | None |
-| **Low / Info** | 15 | 1 of 15 resolved (Commit 1) |
+| **Low / Info** | 15 | 1 mitigated in code (Block 1); rescan pending |
 
 ---
 
@@ -23,13 +23,12 @@
 ### 1. CORS Misconfiguration: Overly Permissive Arbitrary Origin
 - **`cors-misconfig:arbitrary-origin`**
   - *Severity:* **Info / Low**
-  - *Status:* ✅ **RESOLVED (Commit 1)**
-  - *Resolution Applied:* Replaced wildcard `*` with explicit trusted origins in `app/main.py`.
+  - *Status:* ✅ Wildcard removed; CORS now allows only `http://localhost:8080` (Block 1; rescan pending).
   - *Affected URL:* `http://ldap-api:8000`
   - *Triggered Origin:* `cors_origin="http://localhost.bjttr.com"`
-  - *Finding:* The CORS middleware is configured with `allow_origins=["*"]` along with `allow_credentials=True`.
+  - *Finding:* The original scan detected the CORS middleware configured with `allow_origins=["*"]` along with `allow_credentials=True`.
   - *Risk:* Arbitrary external domains can initiate cross-origin requests. An attacker hosting a malicious site could make authorized requests to internal API endpoints on behalf of authenticated users if credentials/tokens are transmitted.
-  - *Remediation:* Restrict `allow_origins` strictly to trusted frontend origins (e.g., `http://localhost:8080` and the internal container hostname) instead of the wildcard `*`.
+  - *Remediation:* `allow_origins` is now restricted to the dashboard's browser origin, `http://localhost:8080`; no wildcard origin is allowed.
 
 ---
 
@@ -67,6 +66,6 @@ The FastAPI response does not set security-hardening headers:
 ---
 
 ## 🛠️ Next Steps: Granular Remediation Plan (Phase 2)
-1. **Commit 1:** Fix CORS policy in `app/main.py`: Replace wildcard `*` with explicit trusted frontend origins.
-2. **Commit 2:** Disable or restrict public Swagger / OpenAPI / ReDoc documentation in production mode.
-3. **Commit 3:** Implement custom middleware or security headers middleware to inject `X-Frame-Options`, `X-Content-Type-Options`, and strip the `Server` header.
+1. ✅ **Block 1 complete:** Restricted CORS in `app/main.py` to the dashboard origin; rescan pending.
+2. **Next block:** Disable or restrict public Swagger / OpenAPI / ReDoc documentation in production mode.
+3. **Later block:** Implement security headers and strip the `Server` header.
