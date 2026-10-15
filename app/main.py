@@ -1,4 +1,7 @@
+import base64
+import binascii
 import os
+import secrets
 import time
 import logging
 import threading
@@ -16,9 +19,6 @@ app = FastAPI(
     title="LDAP Authentication API with Hot Secret Rotation",
     description="Secured FastAPI service with LDAP backend and dynamic API Key validation",
     version="2.0.0",
-    docs_url=None,
-    redoc_url=None,
-    openapi_url=None,
 )
 
 app.add_middleware(
@@ -51,7 +51,35 @@ app.add_middleware(AccessLogMiddleware)
 
 @app.middleware("http")
 async def add_security_headers(request, call_next):
-    response = await call_next(request)
+    response = None
+    if request.url.path in {"/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect"}:
+        credentials = request.headers.get("authorization", "")
+        scheme, separator, value = credentials.partition(" ")
+        username = password = ""
+        try:
+            decoded_credentials = base64.b64decode(value, validate=True).decode("utf-8")
+            username, separator, password = decoded_credentials.partition(":")
+        except (binascii.Error, UnicodeDecodeError):
+            separator = ""
+        expected_key = get_active_api_secret()
+
+        if (
+            scheme.lower() != "basic"
+            or not separator
+            or username != "apikey"
+            or not password
+            or not secrets.compare_digest(password, expected_key)
+        ):
+            from fastapi.responses import JSONResponse
+
+            response = JSONResponse(
+                status_code=401,
+                content={"detail": "Authentication required to access API documentation."},
+                headers={"WWW-Authenticate": 'Basic realm="LDAP API documentation"'},
+            )
+
+    if response is None:
+        response = await call_next(request)
     response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-Content-Type-Options"] = "nosniff"
